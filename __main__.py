@@ -11,7 +11,6 @@ eks_vpc = awsx.ec2.Vpc("eks-vpc",
 eks_cluster = eks.Cluster("eks-cluster",
     vpc_id=eks_vpc.vpc_id,
     private_subnet_ids=eks_vpc.private_subnet_ids,
-    fargate=True,
 )
 
 # Create Kubernetes provider
