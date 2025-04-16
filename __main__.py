@@ -23,6 +23,46 @@ k8s_provider = k8s.Provider('k8s-provider',
     kubeconfig=eks_cluster.kubeconfig
 )
 
+# Define labels for our app
+app_labels = { "app": "cat-app" }
+
+# Create a Deployment using your Docker image
+cat_deployment = k8s.apps.v1.Deployment(
+    "cat-deployment",
+    spec={
+        "selector": {"matchLabels": app_labels},
+        "replicas": 2,
+        "template": {
+            "metadata": {"labels": app_labels},
+            "spec": {
+                "containers": [{
+                    "name": "cat-server",
+                    "image": "agbell/my-random-cat",
+                    "ports": [{"containerPort": 8080}],
+                }]
+            }
+        }
+    },
+    opts=pulumi.ResourceOptions(provider=k8s_provider)
+)
+
+# Create a LoadBalancer Service that maps port 80 to 8080
+cat_service = k8s.core.v1.Service(
+    "cat-service",
+    metadata={
+        "labels": app_labels,
+    },
+    spec={
+        "type": "LoadBalancer",
+        "selector": app_labels,
+        "ports": [{
+            "port": 80,
+            "targetPort": 8080
+        }]
+    },
+    opts=pulumi.ResourceOptions(provider=k8s_provider)
+)
+
 pulumi.export("kubeconfig", eks_cluster.kubeconfig)
 pulumi.export("vpc_id",eks_vpc.vpc_id)
-# pulumi.export("url", pulumi.Output.concat("http://", service.status.load_balancer.ingress[0].hostname))
+pulumi.export("catServiceUrl", cat_service.status.load_balancer.ingress[0].hostname)
