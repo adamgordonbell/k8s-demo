@@ -15,6 +15,7 @@ kubeconfig = eks_stack.get_output("kubeconfig")
 # Create Kubernetes provider using the kubeconfig
 k8s_provider = k8s.Provider("k8s-provider", kubeconfig=kubeconfig)
 
+
 # Deploy resources from YAML files
 cat_deployment_yaml = k8s.yaml.ConfigFile("cat-deployment",
     file="yaml/cat-deployment.yaml",
@@ -28,3 +29,5 @@ cat_service_yaml = k8s.yaml.ConfigFile("cat-service",
 
 # Export the service URL
 pulumi.export("catServiceUrl", cat_service_yaml.get_resource("v1/Service", "cat-service").status.load_balancer.ingress[0].hostname)
+
+
