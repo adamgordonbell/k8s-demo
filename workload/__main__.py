@@ -1,6 +1,4 @@
 import pulumi
-import pulumi_awsx as awsx
-import pulumi_eks as eks
 import pulumi_kubernetes as k8s
 from pulumi_kubernetes.apps.v1 import Deployment, DeploymentSpecArgs
 from pulumi_kubernetes.core.v1 import Service, ServiceSpecArgs, PodTemplateSpecArgs, PodSpecArgs, ContainerArgs, ContainerPortArgs, ServicePortArgs
