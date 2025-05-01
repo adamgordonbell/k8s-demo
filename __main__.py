@@ -2,6 +2,10 @@ import pulumi
 import pulumi_awsx as awsx
 import pulumi_eks as eks
 import pulumi_kubernetes as k8s
+from pulumi_kubernetes.apps.v1 import Deployment, DeploymentSpecArgs
+from pulumi_kubernetes.core.v1 import Service, ServiceSpecArgs, PodTemplateSpecArgs, PodSpecArgs, ContainerArgs, ContainerPortArgs, ServicePortArgs
+from pulumi_kubernetes.meta.v1 import ObjectMetaArgs, LabelSelectorArgs
+from pulumi.resource import ResourceOptions
 
 # Create VPC with default CIDR
 eks_vpc = awsx.ec2.Vpc("eks-vpc",
@@ -27,41 +31,44 @@ k8s_provider = k8s.Provider('k8s-provider',
 app_labels = { "app": "cat-app" }
 
 # Create a Deployment using your Docker image
-cat_deployment = k8s.apps.v1.Deployment(
+cat_deployment = Deployment(
     "cat-deployment",
-    spec={
-        "selector": {"matchLabels": app_labels},
-        "replicas": 2,
-        "template": {
-            "metadata": {"labels": app_labels},
-            "spec": {
-                "containers": [{
-                    "name": "cat-server",
-                    "image": "agbell/my-random-cat",
-                    "ports": [{"containerPort": 8080}],
-                }]
-            }
-        }
-    },
-    opts=pulumi.ResourceOptions(provider=k8s_provider)
+    metadata=ObjectMetaArgs(
+        labels=app_labels,
+    ),
+    spec=DeploymentSpecArgs(
+        replicas=2,
+        selector=LabelSelectorArgs(
+            match_labels=app_labels,
+        ),
+        template=PodTemplateSpecArgs(
+            metadata=ObjectMetaArgs(labels=app_labels),
+            spec=PodSpecArgs(
+                containers=[
+                    ContainerArgs(
+                        name="cat-server",
+                        image="agbell/my-random-cat",
+                        ports=[ContainerPortArgs(container_port=8080)],
+                    ),
+                ],
+            ),
+        ),
+    ),
+    opts=ResourceOptions(provider=k8s_provider),
 )
 
 # Create a LoadBalancer Service that maps port 80 to 8080
-cat_service = k8s.core.v1.Service(
+cat_service = core_v1.Service(
     "cat-service",
-    metadata={
-        "labels": app_labels,
-    },
-    spec={
-        "type": "LoadBalancer",
-        "selector": app_labels,
-        "ports": [{
-            "port": 80,
-            "targetPort": 8080
-        }]
-    },
-    opts=pulumi.ResourceOptions(provider=k8s_provider)
+    metadata=meta_v1.ObjectMetaArgs(labels=app_labels),
+    spec=core_v1.ServiceSpecArgs(
+        type="LoadBalancer",
+        selector=app_labels,
+        ports=[core_v1.ServicePortArgs(port=80, target_port=8080)],
+    ),
+    opts=ResourceOptions(provider=k8s_provider),
 )
+
 
 pulumi.export("kubeconfig", eks_cluster.kubeconfig)
 pulumi.export("vpc_id",eks_vpc.vpc_id)
