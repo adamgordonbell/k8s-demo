@@ -17,24 +17,9 @@ eks_stack = pulumi.StackReference(f"{org}/KubeKitties/{stack}")
 kubeconfig = eks_stack.get_output("kubeconfig")
 
 
-# Create VPC with default CIDR
-eks_vpc = awsx.ec2.Vpc("eks-vpc",
-    enable_dns_hostnames=True)
-
-# Create minimal EKS cluster with EC2 nodes
-eks_cluster = eks.Cluster("eks-cluster",
-    vpc_id=eks_vpc.vpc_id,
-    private_subnet_ids=eks_vpc.private_subnet_ids,
-    skip_default_node_group=False,
-    instance_type="t3.micro",
-    desired_capacity=2,
-    min_size=1,
-    max_size=3,
-)
-
 # Create Kubernetes provider
 k8s_provider = k8s.Provider('k8s-provider',
-    kubeconfig=eks_cluster.kubeconfig
+    kubeconfig=kubeconfig
 )
 
 # Define labels for our app
@@ -68,17 +53,16 @@ cat_deployment = Deployment(
 )
 
 # Create a LoadBalancer Service that maps port 80 to 8080
-cat_service = core_v1.Service(
+cat_service =Service(
     "cat-service",
-    metadata=meta_v1.ObjectMetaArgs(labels=app_labels),
-    spec=core_v1.ServiceSpecArgs(
+    metadata=ObjectMetaArgs(labels=app_labels),
+    spec=ServiceSpecArgs(
         type="LoadBalancer",
         selector=app_labels,
-        ports=[core_v1.ServicePortArgs(port=80, target_port=8080)],
+        ports=[ServicePortArgs(port=80, target_port=8080)],
     ),
     opts=ResourceOptions(provider=k8s_provider),
 )
 
-pulumi.export("kubeconfig", eks_cluster.kubeconfig)
-pulumi.export("vpc_id",eks_vpc.vpc_id)
+pulumi.export("kubeconfig",kubeconfig)
 pulumi.export("catServiceUrl", cat_service.status.load_balancer.ingress[0].hostname)
